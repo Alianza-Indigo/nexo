@@ -1,5 +1,5 @@
 import { evaluateSafety, normalizeAnswer } from "../safety/engine";
-import { selectIntervention } from "../interventions/catalog";
+import { selectAdaptiveIntervention, selectIntervention } from "../interventions/catalog";
 import type { CrisisContext, ExpectedAnswer, RiskLevel, TurnInput, TurnOutput } from "./types";
 
 const EMERGENCY = "Llama al nueve uno uno ahora. Pon el teléfono en altavoz si puedes y sigue sus instrucciones. No te pongas en riesgo.";
@@ -65,7 +65,12 @@ export function processTurn(input: TurnInput): TurnOutput {
       return output("EMERGENCY_ESCALATED", context, risk("CRITICAL"), EMERGENCY, "none", { allowPause: false });
     case "MEDICAL_FILTER":
       if (answer === "yes") return output("SYSTEM_FALLBACK", context, risk("URGENT"), "Busca valoración médica urgente. Si hay dificultad para respirar, alteración de conciencia, lesión grave o empeora rápido, llama al nueve uno uno.", "continue_pause", { showEmergencyCall: true });
-      if (answer === "no") return output("AGE_CONTEXT", context, risk(), "¿Qué rango de edad tiene?", "age_band");
+      if (answer === "no") {
+        const intervention = selectAdaptiveIntervention("demands-reduce-stimuli", context);
+        context.lastInterventionId = intervention.id;
+        context.interventionStep = (context.interventionStep ?? 0) + 1;
+        return output("INTERVENTION_DEMANDS", context, risk(), intervention.text, "ready", { interventionId: intervention.id });
+      }
       return output("MEDICAL_FILTER", context, risk("ELEVATED"), "Necesito confirmarlo: ¿hay algo médico fuera de lo habitual? Sí o no.", "yes_no");
     case "SYSTEM_FALLBACK":
       if (answer === "continue") return output("DANGER_TRIAGE", context, risk("ELEVATED"), "Antes de continuar: ¿hay peligro inmediato? Sí, no o no sé.", "yes_no_unknown", { showEmergencyCall: true });
@@ -83,7 +88,13 @@ export function processTurn(input: TurnInput): TurnOutput {
       return output("OBSERVABLE_BEHAVIOR", context, risk(), "Dime en pocas palabras qué está haciendo ahora.", "free_short");
     case "OBSERVABLE_BEHAVIOR":
       context.behavior = raw.slice(0, 500);
-      return output("PRECEDING_EVENT", context, detected, "¿Qué pasó justo antes?", "free_short");
+      {
+        const intervention = selectAdaptiveIntervention(input.recommendedInterventionId, context);
+        context.lastInterventionId = intervention.id;
+        context.interventionStep = (context.interventionStep ?? 0) + 1;
+        const state = intervention.category === "environment" ? "INTERVENTION_ENVIRONMENT" : intervention.category === "regulation" ? "INTERVENTION_REGULATION" : "INTERVENTION_DEMANDS";
+        return output(state, context, detected, intervention.text, "ready", { interventionId: intervention.id });
+      }
     case "PRECEDING_EVENT":
       context.precedingEvent = raw.slice(0, 500);
       return output("KNOWN_SUPPORT", context, risk(), "¿Hay algo que normalmente le ayuda y que acepta?", "free_short");
@@ -95,22 +106,18 @@ export function processTurn(input: TurnInput): TurnOutput {
     }
     case "INTERVENTION_ENVIRONMENT": {
       if (answer === "cannot") return output("CAREGIVER_ESCALATION", context, risk("URGENT"), "No la fuerces. ¿Puedes alejar el peligro o necesitas ayuda de otro adulto?", "free_short");
-      const intervention = selectIntervention("demands", context);
-      context.lastInterventionId = intervention.id;
-      return output("INTERVENTION_DEMANDS", context, risk(), intervention.text, "ready", { interventionId: intervention.id });
+      return output("REASSESSMENT", context, risk(), "¿Está mejor, igual o peor?", "trend");
     }
     case "INTERVENTION_DEMANDS": {
       if (answer === "cannot") return output("REASSESSMENT", context, risk(), "Está bien. No la fuerces. ¿Está mejor, igual o peor?", "trend");
-      const intervention = selectIntervention("regulation", context);
-      context.lastInterventionId = intervention.id;
-      return output("INTERVENTION_REGULATION", context, risk(), intervention.text, "ready", { interventionId: intervention.id });
+      return output("REASSESSMENT", context, risk(), "¿Está mejor, igual o peor?", "trend");
     }
     case "INTERVENTION_REGULATION":
       return output("REASSESSMENT", context, risk(), "¿Está mejor, igual o peor?", "trend");
     case "REASSESSMENT":
       if (answer === "worse") return output("DANGER_TRIAGE", context, risk("ELEVATED"), "¿Hay peligro inmediato de que alguien se lastime? Sí, no o no sé.", "yes_no_unknown", { showEmergencyCall: true });
       if (answer === "better") return output("STABILITY_CHECK", context, risk(), "¿La respiración y su forma de responder son las habituales? Sí o no.", "yes_no");
-      if (answer === "same") return output("CAREGIVER_CHECK", context, risk(), "Del cero al diez, ¿qué tan rebasado te sientes, donde diez significa al límite?", "scale");
+      if (answer === "same") return output("OBSERVABLE_BEHAVIOR", context, risk(), "Dime en pocas palabras qué sigue ocurriendo para darte el siguiente paso.", "free_short");
       return output("REASSESSMENT", context, risk("ELEVATED"), "Necesito confirmarlo: ¿está mejor, igual o peor?", "trend");
     case "CAREGIVER_CHECK": {
       const numeric = Number(raw.match(/\d+/)?.[0] ?? (raw.includes("8") ? 8 : 5));

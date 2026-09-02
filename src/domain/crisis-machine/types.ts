@@ -44,6 +44,7 @@ export interface TurnInput {
   text?: string;
   context?: CrisisContext;
   transcriptUncertain?: boolean;
+  recommendedInterventionId?: string | null;
 }
 
 export interface TurnOutput {

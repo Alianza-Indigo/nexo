@@ -26,3 +26,32 @@ export function selectIntervention(category: string, context: { environment?: st
   );
   return eligible[0] ?? INTERVENTIONS.find((item) => item.category === category)!;
 }
+
+const ADAPTIVE_CATEGORIES = new Set(["environment", "demands", "regulation"]);
+
+export function selectAdaptiveIntervention(
+  recommendedId: string | null | undefined,
+  context: { environment?: string; knownSupport?: string; lastInterventionId?: string; behavior?: string }
+): Intervention {
+  const recommended = INTERVENTIONS.find((item) => item.id === recommendedId);
+  if (
+    recommended &&
+    ADAPTIVE_CATEGORIES.has(recommended.category) &&
+    recommended.id !== context.lastInterventionId &&
+    (!recommended.constraints.environments || (!!context.environment && recommended.constraints.environments.includes(context.environment))) &&
+    (!recommended.constraints.requiresKnownSupport || Boolean(context.knownSupport))
+  ) return recommended;
+
+  if (/cabeza/i.test(context.behavior ?? "")) {
+    return INTERVENTIONS.find((item) => item.id === "environment-soft-barrier")!;
+  }
+  if (context.environment === "public") {
+    return INTERVENTIONS.find((item) => item.id === "environment-reduce-audience")!;
+  }
+  if (context.knownSupport && context.lastInterventionId !== "regulation-known-support") {
+    return INTERVENTIONS.find((item) => item.id === "regulation-known-support")!;
+  }
+  return context.lastInterventionId === "demands-reduce-stimuli"
+    ? INTERVENTIONS.find((item) => item.id === "regulation-space")!
+    : INTERVENTIONS.find((item) => item.id === "demands-reduce-stimuli")!;
+}

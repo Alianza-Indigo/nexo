@@ -7,6 +7,7 @@ import { processTurn } from "@/domain/crisis-machine/machine";
 import { formatTurn } from "@/application/crisis/format-turn";
 import { restrictedAnalysis } from "@/application/orchestration/restricted-ai";
 import { INTERVENTIONS } from "@/domain/interventions/catalog";
+import { evaluateSafety, normalizeAnswer } from "@/domain/safety/engine";
 import { ok, problem, readJson, safeError } from "@/lib/api";
 
 const schema = z.object({
@@ -32,33 +33,39 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (session.status === "CLOSED" || session.status === "EXPIRED") return problem(409, "SESSION_CLOSED", "La sesión ya no está activa.");
     if (session.sessionVersion !== body.sessionVersion) return problem(409, "VERSION_CONFLICT", "La sesión cambió en otro dispositivo. Recarga antes de continuar.");
 
-    const context = session.contextEncrypted ? JSON.parse(decryptField(session.contextEncrypted)) : {};
-    let turn = processTurn({ state: session.currentState as Parameters<typeof processTurn>[0]["state"], answer: body.modality === "button" ? body.input : undefined, text: body.input, context, transcriptUncertain: body.transcriptUncertain });
+    let context = session.contextEncrypted ? JSON.parse(decryptField(session.contextEncrypted)) : {};
     let modelReference: string | null = null;
-    if (body.modality !== "button" && turn.risk.level !== "CRITICAL" && process.env.AI_PRIMARY_PROVIDER !== "deterministic") {
+    let recommendedInterventionId: string | null = null;
+    let analysisRiskFlags: string[] = [];
+    let analysisRiskUncertain = false;
+    const structuredDanger = ["DANGER_TRIAGE", "REENTRY_SAFETY_CHECK"].includes(session.currentState) ? normalizeAnswer(body.input) : undefined;
+    const preflightRisk = evaluateSafety(body.input, structuredDanger, body.transcriptUncertain);
+    if (body.modality !== "button" && preflightRisk.level !== "CRITICAL" && process.env.AI_PRIMARY_PROVIDER !== "deterministic") {
       const analysis = await restrictedAnalysis(body.input, INTERVENTIONS.map((item) => item.id));
       if (analysis) {
         modelReference = `${process.env.AI_PRIMARY_PROVIDER ?? "gemini"}:${process.env.AI_PRIMARY_MODEL ?? "gemini-3.1-flash-lite"}`;
         const observations = analysis.observations;
-        turn.context = {
-          ...turn.context,
-          ageBand: turn.context.ageBand ?? observations.age_band ?? undefined,
-          environment: turn.context.environment ?? observations.environment ?? undefined,
-          driving: turn.context.driving ?? observations.driving ?? undefined,
-          behavior: turn.context.behavior ?? observations.behavior ?? undefined,
-          precedingEvent: turn.context.precedingEvent ?? observations.preceding_event ?? undefined,
-          knownSupport: turn.context.knownSupport ?? observations.known_support ?? undefined
+        context = {
+          ...context,
+          ageBand: context.ageBand ?? observations.age_band ?? undefined,
+          environment: context.environment ?? observations.environment ?? undefined,
+          driving: context.driving ?? observations.driving ?? undefined,
+          behavior: context.behavior ?? observations.behavior ?? undefined,
+          precedingEvent: context.precedingEvent ?? observations.preceding_event ?? undefined,
+          knownSupport: context.knownSupport ?? observations.known_support ?? undefined
         };
-        const criticalFlags = new Set(["breathing_problem", "unconscious_or_unresponsive", "new_or_prolonged_seizure", "heavy_bleeding", "head_injury", "poisoning_or_overdose", "traffic_water_height_fire", "weapon_or_dangerous_object", "imminent_suicide", "self_injury_severe", "aggression_uncontained", "missing_or_elopement", "caregiver_loss_of_control", "abuse_immediate"]);
-        if (analysis.risk_flags.some((flag) => criticalFlags.has(flag))) {
-          turn = processTurn({ state: "DANGER_TRIAGE", answer: "No sé", context: turn.context });
-          turn.risk.flags = [...new Set([...turn.risk.flags, ...analysis.risk_flags.filter((flag) => criticalFlags.has(flag))])];
-        } else {
-          turn.risk.flags = [...new Set([...turn.risk.flags, ...analysis.risk_flags])];
-          turn.risk.uncertain ||= analysis.risk_uncertain;
-        }
+        recommendedInterventionId = analysis.recommended_intervention_id;
+        analysisRiskFlags = analysis.risk_flags;
+        analysisRiskUncertain = analysis.risk_uncertain;
       }
     }
+    const criticalFlags = new Set(["breathing_problem", "unconscious_or_unresponsive", "new_or_prolonged_seizure", "heavy_bleeding", "head_injury", "poisoning_or_overdose", "traffic_water_height_fire", "weapon_or_dangerous_object", "imminent_suicide", "self_injury_severe", "aggression_uncontained", "missing_or_elopement", "caregiver_loss_of_control", "abuse_immediate"]);
+    const criticalAnalysisFlags = analysisRiskFlags.filter((flag) => criticalFlags.has(flag));
+    const turn = criticalAnalysisFlags.length
+      ? processTurn({ state: "DANGER_TRIAGE", answer: "No sé", context })
+      : processTurn({ state: session.currentState as Parameters<typeof processTurn>[0]["state"], answer: body.modality === "button" ? body.input : undefined, text: body.input, context, transcriptUncertain: body.transcriptUncertain, recommendedInterventionId });
+    turn.risk.flags = [...new Set([...turn.risk.flags, ...analysisRiskFlags])];
+    turn.risk.uncertain ||= analysisRiskUncertain;
     const nextVersion = session.sessionVersion + 1;
     const baseSequence = nextVersion * 2;
     const response = formatTurn(id, nextVersion, turn);
