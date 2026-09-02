@@ -22,12 +22,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a href="#contenido" className="skip-link">Saltar al contenido</a>
         <div className="shell">
           <header className="topbar">
-            <Link href="/" className="brand" aria-label="NEXO, inicio"><span className="brand-mark"><HeartHandshake size={21} /></span>NEXO</Link>
+            <Link href="/" className="brand" aria-label="NEXO, inicio"><span className="brand-mark"><HeartHandshake size={21} /></span><span className="brand-name">NEXO</span></Link>
             <nav className="nav-links" aria-label="Navegación principal">
               <Link className="nav-link optional" href="/resources">Recursos</Link>
               <Link className="nav-link optional" href="/profiles">Perfiles</Link>
               <Link className="nav-link optional" href="/history">Historial</Link>
               <Link className="nav-link optional" href="/settings">Ajustes</Link>
+              <Link className="help-now-link" href="/crisis"><span className="help-label-full">Necesito ayuda ahora</span><span className="help-label-short">Ayuda ahora</span></Link>
               <a className="emergency-link" href="tel:911" aria-label="Llamar al 911">911</a>
             </nav>
           </header>
