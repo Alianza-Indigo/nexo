@@ -2,6 +2,8 @@
 
 PWA de acompañamiento paso a paso para personas adultas cuidadoras durante una crisis emocional neurodivergente. NEXO prioriza seguridad física, utiliza una máquina de estados determinista y conserva rutas críticas aun cuando la IA no esté disponible.
 
+La capa restringida de interpretación y la transcripción de voz utilizan `gemini-3.1-flash-lite`. Gemini nunca controla directamente las transiciones críticas: el motor determinista conserva la autoridad de seguridad y funciona como respaldo si el proveedor falla.
+
 ## Puesta en marcha
 
 1. Copia `.env.example` a `.env.local` y configura Neon, secretos y, si se habilita voz, Vercel Blob.

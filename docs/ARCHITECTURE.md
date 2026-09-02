@@ -1,6 +1,6 @@
 # Arquitectura de NEXO
 
-NEXO usa Next.js App Router en Vercel, PostgreSQL en Neon y Vercel Blob privado para audio efímero. La UI nunca decide un cambio crítico: envía una respuesta, el servidor ejecuta primero el motor de seguridad y después la máquina de estados pura. La IA solo puede extraer observaciones o seleccionar un identificador de una lista permitida; una salida inválida o prohibida se descarta.
+NEXO usa Next.js App Router en Vercel, PostgreSQL en Neon y Vercel Blob privado para audio efímero. La capa de IA y transcripción usa Gemini 3.1 Flash-Lite (`gemini-3.1-flash-lite`). La UI nunca decide un cambio crítico: envía una respuesta, el servidor ejecuta primero el motor de seguridad y después la máquina de estados pura. Gemini solo puede extraer observaciones o seleccionar un identificador de una lista permitida; una salida inválida o prohibida se descarta.
 
 El flujo crítico funciona con plantillas estáticas aun sin proveedor de IA. Sin red, el service worker expone únicamente 911, Línea de la Vida y acciones ambientales universales, declarando que no existe análisis.
 

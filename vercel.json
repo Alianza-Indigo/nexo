@@ -3,6 +3,6 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "crons": [
-    { "path": "/api/v1/jobs/retention", "schedule": "*/15 * * * *" }
+    { "path": "/api/v1/jobs/retention", "schedule": "0 6 * * *" }
   ]
 }

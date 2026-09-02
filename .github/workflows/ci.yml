@@ -27,5 +27,9 @@ jobs:
           DIRECT_URL: postgresql://build:build@localhost:5432/build
           AUTH_SECRET: build-only-secret-with-at-least-thirty-two-characters
           FIELD_ENCRYPTION_KEY_CURRENT: build-only-encryption-key-with-at-least-thirty-two-characters
+          AI_PRIMARY_PROVIDER: gemini
+          AI_PRIMARY_MODEL: gemini-3.1-flash-lite
+          AI_PRIMARY_API_KEY: build-placeholder-key
+          STT_PROVIDER: gemini
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
