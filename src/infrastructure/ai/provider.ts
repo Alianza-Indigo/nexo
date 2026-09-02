@@ -20,7 +20,7 @@ class OpenAIProvider implements AIProvider {
 }
 class GeminiProvider implements AIProvider {
   name = "gemini"; constructor(readonly model: string, private key: string) {}
-  async complete(system: string, input: string) { const response = await timedFetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.key}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: input }] }], generationConfig: { temperature: 0, responseMimeType: "application/json" } }) }); const data = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] }; return aiTurnSchema.parse(JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}")); }
+  async complete(system: string, input: string) { const response = await timedFetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": this.key }, body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: input }] }], generationConfig: { temperature: 0, responseMimeType: "application/json" } }) }); const data = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] }; return aiTurnSchema.parse(JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}")); }
 }
 class AnthropicProvider implements AIProvider {
   name = "anthropic"; constructor(readonly model: string, private key: string) {}
