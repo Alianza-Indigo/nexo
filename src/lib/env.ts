@@ -24,7 +24,7 @@ const schema = z.object({
 export const env = schema.parse(process.env);
 
 export function requireProductionEnv() {
-  const required = ["DATABASE_URL", "DATABASE_URL_UNPOOLED", "AUTH_SECRET", "FIELD_ENCRYPTION_KEY_CURRENT", "SUPERADMIN_EMAIL", "SUPERADMIN_PASSWORD"] as const;
+  const required = ["DATABASE_URL", "AUTH_SECRET", "FIELD_ENCRYPTION_KEY_CURRENT", "SUPERADMIN_EMAIL", "SUPERADMIN_PASSWORD"] as const;
   const missing = required.filter((key) => !env[key]);
   if (missing.length) throw new Error(`Configuración requerida ausente: ${missing.join(", ")}`);
 }
