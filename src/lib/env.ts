@@ -13,6 +13,8 @@ const schema = z.object({
   AI_PRIMARY_MODEL: z.string().optional(),
   STT_PROVIDER: z.enum(["disabled", "openai", "gemini", "browser"]).default("gemini"),
   STT_API_KEY: z.string().optional(),
+  SUPERADMIN_EMAIL: z.email().optional(),
+  SUPERADMIN_PASSWORD: z.string().min(16).optional(),
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
   PROTOCOL_VERSION: z.string().default("2.0"),
   PRIVACY_NOTICE_VERSION: z.string().default("1.0"),
@@ -22,7 +24,7 @@ const schema = z.object({
 export const env = schema.parse(process.env);
 
 export function requireProductionEnv() {
-  const required = ["DATABASE_URL", "AUTH_SECRET", "FIELD_ENCRYPTION_KEY_CURRENT"] as const;
+  const required = ["DATABASE_URL", "AUTH_SECRET", "FIELD_ENCRYPTION_KEY_CURRENT", "SUPERADMIN_EMAIL", "SUPERADMIN_PASSWORD"] as const;
   const missing = required.filter((key) => !env[key]);
   if (missing.length) throw new Error(`Configuración requerida ausente: ${missing.join(", ")}`);
 }

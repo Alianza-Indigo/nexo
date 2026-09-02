@@ -13,6 +13,8 @@ La capa restringida de interpretación y la transcripción de voz utilizan `gemi
 
 La crisis invitada no requiere registro, pero el entorno de servidor sí requiere PostgreSQL para trazabilidad y retención. Sin conexión, el service worker abre una guía estática que declara expresamente que no realiza análisis.
 
+El acceso administrativo inicial se controla con `SUPERADMIN_EMAIL` y `SUPERADMIN_PASSWORD`. La cuenta se aprovisiona automáticamente en su primer inicio de sesión y `/admin` rechaza sesiones no administrativas.
+
 ## Verificación
 
 `npm run check` valida integridad del protocolo, lint, tipos, pruebas y compilación. El archivo `src/content/protocols/nexo-v2.0.txt` debe conservar el SHA-256 aprobado.
