@@ -23,6 +23,6 @@ El acceso administrativo inicial se controla con `SUPERADMIN_EMAIL` y `SUPERADMI
 
 La aplicación está preparada para Vercel, Neon y un store privado de Vercel Blob. Consulta `docs/DEPLOYMENT.md`, `docs/THREAT-MODEL.md` y `docs/INCIDENT-RUNBOOK.md` antes de habilitar producción pública.
 
-Vercel toma el comando de despliegue del propio repositorio. Antes de cada build ejecuta todas las migraciones pendientes con `prisma migrate deploy` y carga el seed idempotente; GitHub Actions comprueba la cadena completa contra PostgreSQL vacío.
+Vercel toma el comando de despliegue del propio repositorio. El comando estándar `npm run build` ejecuta todas las migraciones pendientes con `prisma migrate deploy` usando `DATABASE_URL_UNPOOLED`, carga el seed idempotente y compila Next.js; GitHub Actions comprueba la cadena completa contra PostgreSQL vacío.
 
 NEXO no sustituye al 911 ni a profesionales de salud. La validación profesional, legal, de accesibilidad y en dispositivos reales continúa siendo una condición externa para autorizar producción pública.
