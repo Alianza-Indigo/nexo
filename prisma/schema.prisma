@@ -1,0 +1,440 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  CAREGIVER
+  PROFESSIONAL
+  CONTENT_ADMIN
+  SECURITY_ADMIN
+  SUPPORT
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum SessionStatus {
+  ACTIVE
+  PAUSED
+  STABLE
+  CLOSED
+  EXPIRED
+}
+
+enum RiskLevel {
+  CRITICAL
+  URGENT
+  ELEVATED
+  MANAGEABLE
+  STABLE
+}
+
+enum Actor {
+  USER
+  ENGINE
+  ADMIN
+  SYSTEM
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum Modality {
+  BUTTON
+  TEXT
+  VOICE
+  STATIC
+}
+
+enum ConsentType {
+  VOICE_PROCESSING
+  TRANSCRIPT_PERSISTENCE
+  PROFILE_CREATION
+  OFFLINE_STORAGE
+  PROFESSIONAL_SHARING
+  REPORT_GENERATION
+  COMMUNICATIONS
+  ANALYTICS
+  SESSION_PERSISTENCE
+}
+
+enum ReportType {
+  CRISIS_SHEET
+  SOAP_DRAFT
+}
+
+enum ReportStatus {
+  DRAFT
+  FINAL
+  DELETED
+}
+
+enum ProtocolStatus {
+  DRAFT
+  VALIDATED
+  APPROVED
+  DEPLOYED
+  RETIRED
+}
+
+enum AssetStatus {
+  PENDING
+  PROCESSING
+  TRANSCRIBED
+  DELETED
+  FAILED
+}
+
+enum InterventionStatus {
+  DRAFT
+  VALIDATED
+  RETIRED
+}
+
+model User {
+  id               String              @id @default(cuid())
+  email            String              @unique
+  passwordHash     String?
+  emailVerifiedAt  DateTime?
+  displayName      String?
+  role             UserRole            @default(CAREGIVER)
+  status           UserStatus          @default(PENDING)
+  locale           String              @default("es-MX")
+  timezone         String              @default("America/Chihuahua")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+  caregiverProfile CaregiverProfile?
+  dependents       DependentProfile[]
+  crisisSessions   CrisisSession[]
+  reports          PostcrisisReport[]
+  contacts         TrustedContact[]
+  consents         ConsentReceipt[]
+  sessions         AuthSession[]
+  verification     VerificationToken[]
+  shareGrants      ShareGrant[]
+  audits           AuditEvent[]        @relation("AuditActor")
+}
+
+model AuthSession {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  userAgent String?
+  ipHash    String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CaregiverProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  preferredMode     String   @default("voice_text")
+  ttsSpeed          Float    @default(0.9)
+  reducedMotion     Boolean  @default(false)
+  highContrast      Boolean  @default(false)
+  crisisPreferences Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DependentProfile {
+  id                       String           @id @default(cuid())
+  ownerUserId              String
+  aliasEncrypted           String
+  ageBand                  String
+  pronounsEncrypted        String?
+  communicationModes       String[]
+  sensitivitiesEncrypted   String?
+  observableSignsEncrypted String?
+  emergencyNotesEncrypted  String?
+  saveOfflineAllowed       Boolean          @default(false)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  deletedAt                DateTime?
+  owner                    User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  supports                 KnownSupport[]
+  plans                    CrisisPlan[]
+  contacts                 TrustedContact[]
+  sessions                 CrisisSession[]
+
+  @@index([ownerUserId, deletedAt])
+}
+
+model KnownSupport {
+  id                     String           @id @default(cuid())
+  dependentProfileId     String
+  labelEncrypted         String
+  supportType            String
+  accepted               Boolean
+  conditionsEncrypted    String?
+  source                 String
+  verifiedByProfessional Boolean          @default(false)
+  version                Int              @default(1)
+  createdAt              DateTime         @default(now())
+  retiredAt              DateTime?
+  dependent              DependentProfile @relation(fields: [dependentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([dependentProfileId, accepted])
+}
+
+model CrisisPlan {
+  id                   String           @id @default(cuid())
+  dependentProfileId   String
+  titleEncrypted       String
+  contentEncrypted     String
+  source               String
+  authorLabelEncrypted String?
+  verifiedAt           DateTime?
+  version              Int              @default(1)
+  active               Boolean          @default(true)
+  createdAt            DateTime         @default(now())
+  dependent            DependentProfile @relation(fields: [dependentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([dependentProfileId, active])
+}
+
+model TrustedContact {
+  id                    String            @id @default(cuid())
+  ownerUserId           String
+  dependentProfileId    String?
+  nameEncrypted         String
+  phoneEncrypted        String
+  relationshipEncrypted String?
+  consentConfirmed      Boolean
+  createdAt             DateTime          @default(now())
+  owner                 User              @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  dependent             DependentProfile? @relation(fields: [dependentProfileId], references: [id], onDelete: Cascade)
+}
+
+model CrisisSession {
+  id                 String             @id @default(cuid())
+  ownerUserId        String?
+  guestSessionHash   String?
+  dependentProfileId String?
+  status             SessionStatus      @default(ACTIVE)
+  currentState       String             @default("DANGER_TRIAGE")
+  riskLevel          RiskLevel          @default(ELEVATED)
+  protocolVersion    String             @default("2.0")
+  promptVersion      String             @default("2.0")
+  safetyVersion      String             @default("1.0")
+  sessionVersion     Int                @default(1)
+  contextEncrypted   String?
+  startedAt          DateTime           @default(now())
+  stabilizedAt       DateTime?
+  closedAt           DateTime?
+  persistenceConsent Boolean            @default(false)
+  retentionUntil     DateTime
+  createdAt          DateTime           @default(now())
+  owner              User?              @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  dependent          DependentProfile?  @relation(fields: [dependentProfileId], references: [id], onDelete: SetNull)
+  events             CrisisEvent[]
+  messages           CrisisMessage[]
+  audioAssets        AudioAsset[]
+  safetyAssessments  SafetyAssessment[]
+  interventionRuns   InterventionRun[]
+  reports            PostcrisisReport[]
+
+  @@index([ownerUserId, startedAt])
+  @@index([guestSessionHash, retentionUntil])
+  @@index([status, retentionUntil])
+}
+
+model CrisisEvent {
+  id              String        @id @default(cuid())
+  crisisSessionId String
+  sequence        Int
+  stateFrom       String
+  stateTo         String
+  eventType       String
+  riskFlags       String[]
+  interventionId  String?
+  actor           Actor
+  createdAt       DateTime      @default(now())
+  session         CrisisSession @relation(fields: [crisisSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([crisisSessionId, sequence])
+}
+
+model CrisisMessage {
+  id               String             @id @default(cuid())
+  crisisSessionId  String
+  sequence         Int
+  role             MessageRole
+  modality         Modality
+  contentEncrypted String?
+  normalizedIntent String?
+  expectedAnswer   String?
+  savedWithConsent Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  session          CrisisSession      @relation(fields: [crisisSessionId], references: [id], onDelete: Cascade)
+  assessments      SafetyAssessment[]
+
+  @@unique([crisisSessionId, sequence])
+}
+
+model AudioAsset {
+  id              String        @id @default(cuid())
+  crisisSessionId String
+  privateBlobKey  String
+  mimeType        String
+  sizeBytes       Int
+  status          AssetStatus   @default(PENDING)
+  deleteAfter     DateTime
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  session         CrisisSession @relation(fields: [crisisSessionId], references: [id], onDelete: Cascade)
+
+  @@index([status, deleteAfter])
+}
+
+model SafetyAssessment {
+  id                 String         @id @default(cuid())
+  crisisSessionId    String
+  messageId          String?
+  flags              String[]
+  riskLevel          RiskLevel
+  uncertainty        Boolean
+  evidenceCategories String[]
+  modelReference     String?
+  rulesVersion       String
+  createdAt          DateTime       @default(now())
+  session            CrisisSession  @relation(fields: [crisisSessionId], references: [id], onDelete: Cascade)
+  message            CrisisMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+}
+
+model InterventionDefinition {
+  id              String             @id @default(cuid())
+  stableKey       String             @unique
+  category        String
+  contentTemplate String
+  constraints     Json
+  status          InterventionStatus @default(VALIDATED)
+  protocolVersion String
+  createdAt       DateTime           @default(now())
+  runs            InterventionRun[]
+}
+
+model InterventionRun {
+  id                       String                 @id @default(cuid())
+  crisisSessionId          String
+  interventionDefinitionId String
+  offeredAt                DateTime               @default(now())
+  accepted                 Boolean?
+  completionStatus         String?
+  outcome                  String?
+  createdAt                DateTime               @default(now())
+  session                  CrisisSession          @relation(fields: [crisisSessionId], references: [id], onDelete: Cascade)
+  intervention             InterventionDefinition @relation(fields: [interventionDefinitionId], references: [id])
+}
+
+model PostcrisisReport {
+  id                String        @id @default(cuid())
+  crisisSessionId   String
+  ownerUserId       String
+  reportType        ReportType
+  contentEncrypted  String
+  disclaimerVersion String
+  status            ReportStatus  @default(DRAFT)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+  session           CrisisSession @relation(fields: [crisisSessionId], references: [id], onDelete: Cascade)
+  owner             User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId, deletedAt])
+}
+
+model ConsentReceipt {
+  id               String      @id @default(cuid())
+  userId           String?
+  guestSessionHash String?
+  consentType      ConsentType
+  noticeVersion    String
+  granted          Boolean
+  evidence         Json
+  createdAt        DateTime    @default(now())
+  revokedAt        DateTime?
+  user             User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ShareGrant {
+  id            String    @id @default(cuid())
+  ownerUserId   String
+  resourceType  String
+  resourceId    String
+  recipientHash String
+  permissions   String[]
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  owner         User      @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([recipientHash, expiresAt])
+}
+
+model ProtocolVersion {
+  id              String         @id @default(cuid())
+  semanticVersion String         @unique
+  sourceHash      String
+  status          ProtocolStatus
+  approvedBy      String?
+  approvedAt      DateTime?
+  deployedAt      DateTime?
+  changelog       String
+  createdAt       DateTime       @default(now())
+}
+
+model AuditEvent {
+  id               String   @id @default(cuid())
+  actorId          String?
+  action           String
+  resourceType     String
+  resourceIdHash   String
+  metadataRedacted Json
+  ipHash           String?
+  createdAt        DateTime @default(now())
+  actor            User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt, action])
+}
+
+model IdempotencyKey {
+  id        String   @id @default(cuid())
+  scope     String
+  keyHash   String
+  response  Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([scope, keyHash])
+  @@index([expiresAt])
+}

@@ -1,0 +1,2 @@
+import { SettingsClient } from "@/components/settings/SettingsClient";
+export default function SettingsPage() { return <section className="page"><div className="page-head"><div className="eyebrow">Control de la persona usuaria</div><h1>Accesibilidad, privacidad y dispositivos.</h1><p>Las preferencias visuales se guardan localmente. Los datos persistentes permanecen bajo tu control.</p></div><SettingsClient /></section>; }

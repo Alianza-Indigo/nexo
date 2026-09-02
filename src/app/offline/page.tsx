@@ -1,0 +1,3 @@
+export default function OfflinePage() {
+  return <section className="page"><div className="card"><div className="eyebrow">Modo sin conexión</div><h1>Sin conexión. NEXO no puede analizar lo que ocurre.</h1><p>Si hay peligro inmediato, llama al 911. Si conduces, deja de usar el teléfono, oríllate en un lugar seguro y detén el auto.</p><div className="actions"><a className="button button-danger" href="tel:911">Llamar al 911</a><a className="button button-secondary" href="tel:8009112000">Línea de la Vida</a></div><div className="notice">Acción universal: reduce ruido y demandas. Aleja objetos peligrosos únicamente si puede hacerse sin forcejeo ni riesgo.</div></div></section>;
+}

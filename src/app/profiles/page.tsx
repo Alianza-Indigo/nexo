@@ -1,0 +1,2 @@
+import { ProfilesClient } from "@/components/profiles/ProfilesClient";
+export default function ProfilesPage() { return <section className="page"><div className="page-head"><div className="eyebrow">Personalización opcional</div><h1>Perfiles mínimos y apoyos conocidos.</h1><p>El perfil reduce preguntas; nunca reemplaza la situación actual ni autoriza estrategias rechazadas.</p></div><ProfilesClient /></section>; }

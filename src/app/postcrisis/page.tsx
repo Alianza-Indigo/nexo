@@ -1,0 +1,2 @@
+import { PostcrisisForm } from "@/components/postcrisis/PostcrisisForm";
+export default function PostcrisisPage() { return <section className="page"><div className="page-head"><div className="eyebrow">Después del evento</div><h1>Revisar sin juzgar ni inventar.</h1><p>Si alguien quedó lesionado, tiene dolor fuera de lo habitual o presenta un cambio médico, prioriza la valoración correspondiente.</p></div><PostcrisisForm /></section>; }

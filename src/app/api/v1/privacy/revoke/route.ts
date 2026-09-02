@@ -1,0 +1,5 @@
+import { z } from "zod";
+import { db } from "@/infrastructure/db/client";
+import { getCurrentUser } from "@/infrastructure/auth/session";
+import { ok, problem, readJson, safeError } from "@/lib/api";
+export async function POST(request: Request) { try { const user = await getCurrentUser(); if (!user) return problem(401, "AUTH_REQUIRED", "Inicia sesión."); const body = await readJson(request, z.object({ consentType: z.enum(["VOICE_PROCESSING", "TRANSCRIPT_PERSISTENCE", "PROFILE_CREATION", "OFFLINE_STORAGE", "PROFESSIONAL_SHARING", "REPORT_GENERATION", "COMMUNICATIONS", "ANALYTICS", "SESSION_PERSISTENCE"]) })); await db.consentReceipt.updateMany({ where: { userId: user.id, consentType: body.consentType, revokedAt: null }, data: { revokedAt: new Date() } }); await db.consentReceipt.create({ data: { userId: user.id, consentType: body.consentType, noticeVersion: process.env.PRIVACY_NOTICE_VERSION ?? "1.0", granted: false, evidence: { source: "privacy_control" } } }); return ok({ revoked: true }); } catch (error) { return safeError(error); } }

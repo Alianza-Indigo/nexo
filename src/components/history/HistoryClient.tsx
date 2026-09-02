@@ -1,0 +1,5 @@
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+type Item = { id: string; status: string; riskLevel: string; startedAt: string; protocolVersion: string };
+export function HistoryClient() { const [items, setItems] = useState<Item[]>([]); const [auth, setAuth] = useState<boolean | null>(null); useEffect(() => { fetch("/api/v1/history").then((r) => r.json()).then((r) => { setAuth(r.ok); if (r.ok) setItems(r.data); }); }, []); if (auth === false) return <div className="card"><p>Inicia sesión para ver las sesiones que elegiste conservar.</p><Link className="button button-primary" href="/login">Iniciar sesión</Link></div>; return <div className="resource-list">{items.length ? items.map((item) => <article className="resource" key={item.id}><div><strong>{new Date(item.startedAt).toLocaleString("es-MX")}</strong><span>{item.status} · protocolo {item.protocolVersion}</span></div><Link className="text-link" href={`/history/${item.id}`}>Ver detalle</Link></article>) : <div className="card"><p className="muted">No hay sesiones guardadas. Las sesiones invitadas no aparecen sin consentimiento.</p></div>}</div>; }

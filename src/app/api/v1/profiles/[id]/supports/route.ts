@@ -1,0 +1,7 @@
+import { z } from "zod";
+import { db } from "@/infrastructure/db/client";
+import { getCurrentUser } from "@/infrastructure/auth/session";
+import { encryptField } from "@/infrastructure/crypto/fields";
+import { ok, problem, readJson, safeError } from "@/lib/api";
+const schema = z.object({ label: z.string().trim().min(1).max(200), supportType: z.string().trim().min(1).max(50), accepted: z.boolean(), conditions: z.string().max(500).optional(), source: z.enum(["caregiver", "professional"]).default("caregiver"), verifiedByProfessional: z.boolean().default(false) });
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) { try { const user = await getCurrentUser(); if (!user) return problem(401, "AUTH_REQUIRED", "Inicia sesión."); const { id } = await params; const profile = await db.dependentProfile.findFirst({ where: { id, ownerUserId: user.id, deletedAt: null } }); if (!profile) return problem(404, "NOT_FOUND", "Perfil no encontrado."); const body = await readJson(request, schema); const support = await db.knownSupport.create({ data: { dependentProfileId: id, labelEncrypted: encryptField(body.label), supportType: body.supportType, accepted: body.accepted, conditionsEncrypted: body.conditions ? encryptField(body.conditions) : null, source: body.source, verifiedByProfessional: body.verifiedByProfessional } }); return ok({ id: support.id }, 201); } catch (error) { return safeError(error); } }

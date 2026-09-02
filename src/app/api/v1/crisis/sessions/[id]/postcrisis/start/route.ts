@@ -1,0 +1,5 @@
+import { db } from "@/infrastructure/db/client";
+import { getGuest } from "@/infrastructure/auth/guest";
+import { canAccessGuestSession } from "@/application/crisis/session-access";
+import { ok, problem, safeError } from "@/lib/api";
+export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) { try { const { id } = await params; const session = await db.crisisSession.findUnique({ where: { id } }); if (!session || !canAccessGuestSession(session, await getGuest())) return problem(404, "NOT_FOUND", "Sesión no encontrada."); if (session.riskLevel !== "STABLE" && session.status !== "STABLE") return problem(409, "NOT_STABLE", "Primero debe confirmarse estabilidad."); const updated = await db.crisisSession.update({ where: { id }, data: { currentState: "POSTCRISIS_INJURY_CHECK", sessionVersion: { increment: 1 } } }); return ok({ sessionId: id, state: updated.currentState, message: "¿Alguien quedó lesionado o tiene dolor fuera de lo habitual? Sí o no.", version: updated.sessionVersion }); } catch (error) { return safeError(error); } }
