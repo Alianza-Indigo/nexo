@@ -105,17 +105,16 @@ enum InterventionStatus {
 }
 
 model User {
-  id               String              @id @default(cuid())
-  email            String              @unique
+  id               String             @id @default(cuid())
+  email            String             @unique
   passwordHash     String?
-  emailVerifiedAt  DateTime?
   displayName      String?
-  role             UserRole            @default(CAREGIVER)
-  status           UserStatus          @default(PENDING)
-  locale           String              @default("es-MX")
-  timezone         String              @default("America/Chihuahua")
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  role             UserRole           @default(CAREGIVER)
+  status           UserStatus         @default(ACTIVE)
+  locale           String             @default("es-MX")
+  timezone         String             @default("America/Chihuahua")
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   deletedAt        DateTime?
   caregiverProfile CaregiverProfile?
   dependents       DependentProfile[]
@@ -124,9 +123,8 @@ model User {
   contacts         TrustedContact[]
   consents         ConsentReceipt[]
   sessions         AuthSession[]
-  verification     VerificationToken[]
   shareGrants      ShareGrant[]
-  audits           AuditEvent[]        @relation("AuditActor")
+  audits           AuditEvent[]       @relation("AuditActor")
 }
 
 model AuthSession {
@@ -141,16 +139,6 @@ model AuthSession {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
-}
-
-model VerificationToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CaregiverProfile {

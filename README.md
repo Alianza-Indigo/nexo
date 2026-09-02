@@ -13,7 +13,7 @@ La capa restringida de interpretación y la transcripción de voz utilizan `gemi
 
 La crisis invitada no requiere registro, pero el entorno de servidor sí requiere PostgreSQL para trazabilidad y retención. Sin conexión, el service worker abre una guía estática que declara expresamente que no realiza análisis.
 
-El acceso administrativo inicial se controla con `SUPERADMIN_EMAIL` y `SUPERADMIN_PASSWORD`. La cuenta se aprovisiona automáticamente en su primer inicio de sesión y `/admin` rechaza sesiones no administrativas.
+El registro activa la cuenta e inicia sesión de inmediato; NEXO no exige verificación de correo. El acceso administrativo inicial se controla con `SUPERADMIN_EMAIL` y `SUPERADMIN_PASSWORD`. La cuenta se aprovisiona automáticamente en su primer inicio de sesión y `/admin` rechaza sesiones no administrativas.
 
 ## Verificación
 

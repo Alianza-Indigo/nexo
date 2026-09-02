@@ -25,8 +25,8 @@ export async function authenticateConfiguredSuperadmin(email: string, password: 
   const passwordHash = passwordIsCurrent ? existing!.passwordHash! : await hash(configuredPassword!, 12);
   const user = await db.user.upsert({
     where: { email: normalizedEmail },
-    update: { passwordHash, emailVerifiedAt: new Date(), displayName: existing?.displayName ?? "Superadministrador", role: "SUPERADMIN", status: "ACTIVE", deletedAt: null },
-    create: { email: normalizedEmail, passwordHash, emailVerifiedAt: new Date(), displayName: "Superadministrador", role: "SUPERADMIN", status: "ACTIVE" }
+    update: { passwordHash, displayName: existing?.displayName ?? "Superadministrador", role: "SUPERADMIN", status: "ACTIVE", deletedAt: null },
+    create: { email: normalizedEmail, passwordHash, displayName: "Superadministrador", role: "SUPERADMIN", status: "ACTIVE" }
   });
 
   if (existing && (existing.role !== "SUPERADMIN" || !passwordIsCurrent)) {

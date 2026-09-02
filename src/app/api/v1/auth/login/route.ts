@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const user = await db.user.findUnique({ where: { email: body.email } });
     if (user?.role === "SUPERADMIN") return problem(401, "INVALID_CREDENTIALS", "Correo o contraseña incorrectos.");
     if (!user?.passwordHash || !(await compare(body.password, user.passwordHash))) return problem(401, "INVALID_CREDENTIALS", "Correo o contraseña incorrectos.");
-    if (user.status !== "ACTIVE" || !user.emailVerifiedAt) return problem(403, "VERIFY_EMAIL", "Verifica tu correo antes de iniciar sesión.");
+    if (user.status !== "ACTIVE") return problem(403, "ACCOUNT_INACTIVE", "La cuenta no está activa.");
     await createUserSession(user.id); return ok({ user: { id: user.id, displayName: user.displayName, role: user.role } });
   } catch (error) { return safeError(error); }
 }
